@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, type MouseEvent } from 'react';
-import { Download, File, FileImage, FileSpreadsheet, FileText, Loader2, Trash2 } from 'lucide-react';
+import { Download, Eye, File, FileImage, FileSpreadsheet, FileText, Loader2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,19 +15,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { useCountdown } from '@/hooks';
 import { useDeleteFile, useGetPresignedUrl } from '@/features/files/hooks';
 import type { FileUpload } from '@/features/files/types';
-import { formatBytes, formatDate } from '@/features/files/utils';
-
-function openInNewTab(url: string): void {
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.target = '_blank';
-  anchor.rel = 'noopener noreferrer';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-}
+import { formatBytes, formatDate, openInNewTab } from '@/features/files/utils';
+import { CopyLinkButton } from './copy-link-button';
+import { FileDetailDialog } from './file-detail-dialog';
 
 const FILE_ICON_CLASS_NAME = 'size-4 shrink-0 text-muted-foreground';
 
@@ -45,8 +39,12 @@ function renderFileIcon(mimeType: string) {
 
 export function FilesTableRow({ file }: { file: FileUpload }) {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const presign = useGetPresignedUrl();
   const deleteFile = useDeleteFile();
+  const presignedUrl = presign.data?.data?.url;
+  const expiresAt = presign.data?.data?.expiresAt;
+  const { isExpired } = useCountdown(expiresAt ?? null);
 
   const handleDownload = async () => {
     presign.reset();
@@ -58,13 +56,21 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
     }
   };
 
+  const handleRefreshLink = () => {
+    presign.mutate(file.id);
+  };
+
   const handleConfirmDelete = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    if (deleteFile.isPending) return;
+    setIsConfirmOpen(false);
     deleteFile
       .mutateAsync(file.id)
-      .then(() => setIsConfirmOpen(false))
-      .catch(() => null);
+      .then(() => {
+        toast.success(`Deleted “${file.originalName}”`);
+      })
+      .catch((error: Error) => {
+        toast.error(`Couldn’t delete “${file.originalName}”`, { description: error.message });
+      });
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -79,9 +85,14 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
       <TableCell className="pl-4">
         <div className="flex items-center gap-2">
           {renderFileIcon(file.mimeType)}
-          <span className="truncate font-medium" title={file.originalName}>
+          <button
+            type="button"
+            onClick={() => setIsDetailOpen(true)}
+            className="truncate font-medium hover:underline focus-visible:underline focus-visible:outline-none"
+            title={file.originalName}
+          >
             {file.originalName}
-          </span>
+          </button>
         </div>
         {presign.error && (
           <p className="mt-1 truncate text-xs text-destructive" title={presign.error.message}>
@@ -113,9 +124,18 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
             type="button"
             variant="ghost"
             size="icon-sm"
+            aria-label={`View details for ${file.originalName}`}
+            onClick={() => setIsDetailOpen(true)}
+          >
+            <Eye />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={`Download ${file.originalName}`}
             onClick={handleDownload}
-            disabled={presign.isPending}
+            disabled={presign.isPending || (Boolean(presignedUrl) && isExpired)}
           >
             {presign.isPending ? <Loader2 className="animate-spin" /> : <Download />}
           </Button>
@@ -129,6 +149,16 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
             <Trash2 className="text-destructive" />
           </Button>
         </div>
+        {presignedUrl && (
+          <div className="mt-1 flex justify-end">
+            <CopyLinkButton
+              url={presignedUrl}
+              expiresAt={expiresAt}
+              onRefresh={handleRefreshLink}
+              isRefreshing={presign.isPending}
+            />
+          </div>
+        )}
         <AlertDialog open={isConfirmOpen} onOpenChange={handleDialogChange}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -137,7 +167,6 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
                 Are you sure you want to delete “{file.originalName}”? The file will be removed from your list.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {deleteFile.error && <p className="text-sm text-destructive">{deleteFile.error.message}</p>}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleteFile.isPending}>Cancel</AlertDialogCancel>
               <AlertDialogAction variant="destructive" onClick={handleConfirmDelete} disabled={deleteFile.isPending}>
@@ -147,6 +176,7 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <FileDetailDialog file={file} open={isDetailOpen} onOpenChange={setIsDetailOpen} />
       </TableCell>
     </TableRow>
   );

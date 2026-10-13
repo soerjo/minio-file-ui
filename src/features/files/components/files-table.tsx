@@ -7,35 +7,29 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/utils';
-import { useFilesList } from '@/features/files/hooks';
+import { PAGE_SIZE, SORT_OPTIONS } from '@/features/files/constants';
+import { useFilesList, useFilesQueryParams } from '@/features/files/hooks';
 import type { FilesSort } from '@/features/files/types';
 import { FilesTableRow } from './files-table-row';
 
-const PAGE_SIZE = 20;
-
-const SORT_OPTIONS: ReadonlyArray<{ value: FilesSort; label: string }> = [
-  { value: 'createdAt:desc', label: 'Newest first' },
-  { value: 'createdAt:asc', label: 'Oldest first' },
-  { value: 'originalName:asc', label: 'Name A to Z' },
-  { value: 'originalName:desc', label: 'Name Z to A' },
-  { value: 'size:desc', label: 'Largest first' },
-  { value: 'size:asc', label: 'Smallest first' },
-];
-
 export function FilesTable() {
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<FilesSort>('createdAt:desc');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const { page, search, sort, setPage, setSearch, setSort } = useFilesQueryParams();
+  const [searchInput, setSearchInput] = useState(search);
+  const [lastSearch, setLastSearch] = useState(search);
+
+  if (search !== lastSearch) {
+    setLastSearch(search);
+    setSearchInput(search);
+  }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 400);
+    const trimmed = searchInput.trim();
+    if (trimmed === search) return;
+
+    const timer = setTimeout(() => setSearch(trimmed), 400);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search, setSearch]);
 
   const { data, isPending, isError, error, isPlaceholderData, refetch } = useFilesList({
     page,
@@ -66,13 +60,7 @@ export function FilesTable() {
             className="pl-8"
           />
         </div>
-        <Select
-          value={sort}
-          onValueChange={(value) => {
-            setSort(value as FilesSort);
-            setPage(1);
-          }}
-        >
+        <Select value={sort} onValueChange={(value) => setSort(value as FilesSort)}>
           <SelectTrigger className="w-40" aria-label="Sort files">
             <SelectValue />
           </SelectTrigger>
@@ -146,7 +134,7 @@ export function FilesTable() {
             variant="outline"
             size="sm"
             disabled={page <= 1 || isPending || isPlaceholderData}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            onClick={() => setPage(page - 1)}
           >
             Previous
           </Button>
@@ -155,7 +143,7 @@ export function FilesTable() {
             variant="outline"
             size="sm"
             disabled={page >= totalPages || isPending || isPlaceholderData}
-            onClick={() => setPage((current) => current + 1)}
+            onClick={() => setPage(page + 1)}
           >
             Next
           </Button>
