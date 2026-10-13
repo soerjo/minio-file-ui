@@ -6,10 +6,11 @@ This project implements a secure authentication system consuming backend microse
 
 ### API Integration
 
-The authentication system connects to backend microservices at:
-- **Base URL**: `process.env.NEXT_PUBLIC_API_URL`
-- **API Pattern**: `/api/v1/{resource}`
-- **Example**: `https://api.example.com/api/v1/auth/login`
+The authentication system connects to the backend at:
+- **Base URL**: `process.env.NEXT_PUBLIC_API_URL`, defaulting to the relative `/api` path
+- **API prefix**: the base URL is the single source of truth for the `/api` prefix; endpoint
+  constants in `src/constants/index.ts` are relative (e.g. `/auth/login`)
+- **Composed URL example**: `https://api.example.com/api` + `/auth/login` → `https://api.example.com/api/auth/login`
 
 ### Core Components
 
@@ -41,11 +42,11 @@ Enhanced API client with auth integration:
 
 #### 4. Auth Service (`auth-service.ts`)
 Typed API service methods for authentication endpoints:
-- `login()` - POST `/api/v1/auth/login`
-- `logout()` - POST `/api/v1/auth/logout`
-- `refreshToken()` - POST `/api/v1/auth/refresh-token`
-- `verifyToken()` - GET `/api/v1/auth/verify-token`
-- `me()` - GET `/api/v1/auth/me`
+- `login()` - POST `/auth/login`
+- `logout()` - POST `/auth/logout`
+- `refreshToken()` - POST `/auth/refresh-token`
+- `verifyToken()` - GET `/auth/verify-token`
+- `me()` - GET `/auth/me`
 
 ## Features
 
@@ -147,11 +148,11 @@ The API client automatically includes auth headers:
 ```tsx
 import { apiClient } from "@/lib";
 
-// Authenticated request (includes Bearer token)
-const data = await apiClient.get("/api/v1/user");
+// Authenticated request (includes Bearer token); endpoint is relative to the base URL
+const data = await apiClient.get("/files");
 
 // Unauthenticated request (skip auth)
-const publicData = await apiClient.get("/api/v1/health", { skipAuth: true });
+const publicData = await apiClient.get("/health", { skipAuth: true });
 ```
 
 ### Token Management
@@ -190,7 +191,7 @@ TokenManager.clearTokens();
 Required environment variables:
 
 ```env
-NEXT_PUBLIC_API_URL=https://your-backend-api.com
+NEXT_PUBLIC_API_URL=https://your-backend-api.com/api
 NEXT_PUBLIC_APP_NAME=Your App Name
 ```
 
@@ -199,7 +200,7 @@ NEXT_PUBLIC_APP_NAME=Your App Name
 ```
 User Login
     ↓
-AuthService.login() → POST /api/v1/auth/login
+AuthService.login() → POST /auth/login
     ↓
 Backend validates credentials
     ↓
@@ -207,7 +208,7 @@ Backend returns JWT tokens (accessToken, refreshToken)
     ↓
 TokenManager stores tokens in localStorage
     ↓
-AuthProvider verifies tokens with GET /api/v1/auth/verify-token
+AuthProvider verifies tokens with GET /auth/verify-token
     ↓
 Auth state updates: isAuthenticated = true
     ↓

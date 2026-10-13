@@ -7,20 +7,20 @@ export const ROUTES = {
 } as const;
 
 export const API_ROUTES = {
-  health: '/api/health',
-  login: '/api/auth/login',
-  logout: '/api/auth/logout',
-  refreshToken: '/api/auth/refresh-token',
-  verifyToken: '/api/auth/verify-token',
-  me: '/api/auth/me',
-  register: '/api/auth/register',
+  health: '/health',
+  login: '/auth/login',
+  logout: '/auth/logout',
+  refreshToken: '/auth/refresh-token',
+  verifyToken: '/auth/verify-token',
+  me: '/auth/me',
+  register: '/auth/register',
   files: {
-    upload: '/api/files/upload',
-    list: '/api/files',
+    upload: '/files/upload',
+    list: '/files',
   },
 } as const;
 
 export const fileRoutes = {
-  detail: (id: string) => `/api/files/${id}`,
-  url: (id: string) => `/api/files/${id}/url`,
+  detail: (id: string) => `/files/${id}`,
+  url: (id: string) => `/files/${id}/url`,
 } as const;
