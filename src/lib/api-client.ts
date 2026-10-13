@@ -1,10 +1,18 @@
 import { TokenManager } from '@/features/auth/services/token-manager';
+import type { LoginResponse } from '@/features/auth/types';
+import type { ApiResponse } from '@/types';
 import { API_ROUTES } from '@/constants';
 
 type RequestOptions = {
-  body?: string;
+  body?: string | FormData;
   headers?: Record<string, string>;
   skipAuth?: boolean;
+};
+
+type ParsedErrorBody = {
+  message: string;
+  code?: string;
+  details?: string[];
 };
 
 class ApiClient {
@@ -14,6 +22,10 @@ class ApiClient {
 
   constructor(baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api') {
     this.baseUrl = baseUrl;
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
   }
 
   private getAuthHeaders(skipAuth: boolean = false): Record<string, string> {
@@ -55,24 +67,39 @@ class ApiClient {
     }
   }
 
-  private async parseErrorMessage(response: Response): Promise<string> {
+  private async parseErrorBody(response: Response): Promise<ParsedErrorBody> {
     const text = await response.text().catch(() => '');
 
     if (!text) {
-      return response.statusText || `Request failed with status ${response.status}`;
+      return { message: response.statusText || `Request failed with status ${response.status}` };
     }
 
     try {
       const body = JSON.parse(text) as { message?: unknown; error?: unknown };
+
+      if (typeof body.error === 'object' && body.error !== null) {
+        const error = body.error as { code?: unknown; message?: unknown; details?: unknown };
+        const code = typeof error.code === 'string' && error.code ? error.code : undefined;
+        const details = Array.isArray(error.details)
+          ? error.details.filter((detail): detail is string => typeof detail === 'string')
+          : undefined;
+
+        return {
+          message: typeof error.message === 'string' && error.message ? error.message : (code ?? text),
+          code,
+          details,
+        };
+      }
+
       const message = body.message ?? body.error;
       if (typeof message === 'string' && message) {
-        return message;
+        return { message };
       }
     } catch {
-      return text;
+      return { message: text };
     }
 
-    return text;
+    return { message: text };
   }
 
   private subscribeTokenRefresh(callback: (token: string) => void): void {
@@ -84,7 +111,7 @@ class ApiClient {
     this.refreshSubscribers = [];
   }
 
-  private async refreshAccessToken(): Promise<string | null> {
+  async refreshAccessToken(): Promise<string | null> {
     const refreshToken = TokenManager.getRefreshToken();
     if (!refreshToken) {
       TokenManager.clearTokens();
@@ -105,9 +132,7 @@ class ApiClient {
         return null;
       }
 
-      const data = await this.parseResponse<{
-        data?: { accessToken?: string; refreshToken?: string };
-      }>(response);
+      const data = await this.parseResponse<ApiResponse<LoginResponse>>(response);
       if (data?.data?.accessToken) {
         TokenManager.setAccessToken(data.data.accessToken);
         if (data.data.refreshToken) {
@@ -129,7 +154,7 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...rest,
       headers: {
-        'Content-Type': 'application/json',
+        ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...this.getAuthHeaders(skipAuth),
         ...customHeaders,
       },
@@ -149,7 +174,8 @@ class ApiClient {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         }
-        throw new ApiError(response.status, await this.parseErrorMessage(response));
+        const errorBody = await this.parseErrorBody(response);
+        throw new ApiError(response.status, errorBody.message, errorBody.code, errorBody.details);
       }
 
       if (this.isRefreshing) {
@@ -185,7 +211,8 @@ class ApiClient {
       }
     }
 
-    throw new ApiError(response.status, await this.parseErrorMessage(response));
+    const errorBody = await this.parseErrorBody(response);
+    throw new ApiError(response.status, errorBody.message, errorBody.code, errorBody.details);
   }
 
   get<T>(endpoint: string, options?: RequestOptions) {
@@ -193,10 +220,12 @@ class ApiClient {
   }
 
   post<T>(endpoint: string, data?: unknown, options?: RequestOptions) {
+    const body = data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
+
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -214,12 +243,19 @@ class ApiClient {
 }
 
 export class ApiError extends Error {
+  code?: string;
+  details?: string[];
+
   constructor(
     public status: number,
     message: string,
+    code?: string,
+    details?: string[],
   ) {
     super(message);
     this.name = 'ApiError';
+    this.code = code;
+    this.details = details;
   }
 }
 
