@@ -275,3 +275,55 @@ Bounded, ordered checklist to remove the dashboard/home route and make `/files` 
   - [x] `bunx tsc --noEmit` 0 errors
   - [x] `bun run build` success
 <!-- END:remove-dashboard-files-default -->
+
+<!-- BEGIN:files-enhancements -->
+## Files page enhancements (tests · URL state · detail/preview · copy+countdown · optimistic delete)
+
+Bounded, ordered checklist for 5 frontend enhancements on top of the existing files feature. Context: files UI lives in `src/features/files/` (`FilesTable`, `FilesTableRow`, `UploadDropzone`), hooks in `src/features/files/hooks/`, routes/keys via `API_ROUTES`/`fileRoutes`/`queryKeys`, tests via Vitest + RTL (`bun run test`, single `src/__tests__/smoke.test.tsx`), Bun only (never npm), semantic tokens only. Current list controls (`page`/`search`/`sort`) and `SORT_OPTIONS`/`PAGE_SIZE` are local `useState` inside `src/features/files/components/files-table.tsx`; `useDeleteFile` invalidates only (no optimistic update); presign/download is fire-and-forget with no copy or expiry UI; no detail view exists. **Do NOT write source code in this step — plan only; every item pending.** Each section must be independently verifiable before moving on.
+
+- [ ] **1. Unit tests for the files feature**
+  - [ ] Add `src/__tests__/test-utils.tsx`: `renderWithQueryClient()` (fresh `QueryClient` with `retry: false`, wrapped in `QueryClientProvider`) + `createQueryClient()` export for hook tests
+  - [ ] Add `src/features/files/__tests__/factories.ts`: `makeFileUpload(overrides?)` and `makeFilesListResponse(overrides?)` typed fakes (all `FileUpload` fields per `src/features/files/types/index.ts`)
+  - [ ] Unit-test `src/features/files/utils` (`formatBytes`, `formatDate`, `makeId`): zero/negative/NaN bytes, unit boundaries, invalid date → `—`, id shape/uniqueness
+  - [ ] Unit-test `useFilesList` (`hooks/use-files-list.ts`): mock `apiClient.get`, assert endpoint includes `page`/`limit`/`search`/`sort` (via `URLSearchParams` off `API_ROUTES.files.list`) and `queryKeys.files.list(filters)`; assert omission when filters empty
+  - [ ] Unit-test `useDeleteFile` and `useGetPresignedUrl`: assert `fileRoutes.detail(id)` / `fileRoutes.url(id)` call and `queryKeys.files.all` invalidation on delete success
+  - [ ] Component-test `FilesTable` (`components/files-table.tsx`) with `@/features/files/hooks` mocked: loading skeleton, error + "Try again", empty state (`search` on/off copy), rows rendered, Previous/Next disabled states
+  - [ ] Component-test `FilesTableRow` (`components/files-table-row.tsx`): renders name/size/status/action buttons; download calls `useGetPresignedUrl`; delete opens `AlertDialog` and confirm calls `mutateAsync`
+  - [ ] Add `test:coverage` script (`bun run test:coverage`) with a `coverage` block scoped to `src/features/files/**` (do not enforce global thresholds yet)
+  - [ ] Verify: `bun run test` green (existing smoke + new), `bun run lint` exit 0, `bunx tsc --noEmit` 0 errors; `rg` shows tests colocated under `src/features/files/__tests__/`
+
+- [ ] **2. List state in the URL (page / search / sort)**
+  - [ ] Move `SORT_OPTIONS`, `PAGE_SIZE`, and a new `DEFAULT_SORT = 'createdAt:desc'` out of `files-table.tsx` into `src/features/files/constants/index.ts` (single source shared by select + URL parser)
+  - [ ] Add `useFilesQueryParams()` in `src/features/files/hooks/use-files-query-params.ts` (+ barrel): read `page`/`search`/`sort` from `useSearchParams()`, validate (integer `page >= 1`, `sort` must be a known `FilesSort`, else default), expose typed values + setters that write via `router.replace(pathname + params, { scroll: false })` (no history spam); search/sort setters reset `page` to 1
+  - [ ] Refactor `FilesTable` to consume `useFilesQueryParams` instead of the local `page`/`sort`/`search` `useState`; keep the 400 ms debounce between the search input and the URL write
+  - [ ] Wrap the `useSearchParams`-reading client component in `<Suspense>` with a skeleton fallback in `src/app/(main)/files/page.tsx` per the Next 16 App Router requirement — read the relevant guide under `node_modules/next/dist/docs/` first
+  - [ ] Update `next/navigation` mocks in `src/__tests__/smoke.test.tsx` (and any new test utils) to provide `useSearchParams`/`useRouter`/`usePathname`; add a `useFilesQueryParams` unit test (parse, defaults, invalid `sort`/`page` coercion)
+  - [ ] Verify: manual — changing search/sort/page updates the URL, reload and browser Back restore the view, deep-linking `?page=2&sort=size:desc&search=x` works; `rg` confirms no list-state `useState` remains in `FilesTable`; `bun run lint`, `bunx tsc --noEmit`, `bun run test` green
+
+- [ ] **3. File detail view + preview**
+  - [ ] Add `queryKeys.files.detail(id)` to `src/lib/query-keys.ts` (follow the `as const` factory pattern)
+  - [ ] Add `useGetFile(id)` in `src/features/files/hooks/use-get-file.ts` (+ barrel): `useQuery` on `fileRoutes.detail(id)` → `ApiResponse<FileUpload>`, `enabled: Boolean(id)`
+  - [ ] Add the shadcn `dialog` primitive (`bunx --bun shadcn@latest add -y dialog`); fix any regressions (CLI re-adding `cn` dep, `@/utils` import path) per the existing migration convention
+  - [ ] Add `src/features/files/components/file-detail-dialog.tsx` (controlled `open`/`onOpenChange`): metadata block (name, mime, size, status, `uploadedBy`, `createdAt`/`updatedAt`, `checksum`, `bucket`/`objectKey`) + loading/error states using semantic tokens
+  - [ ] Preview strategy (lazy, only when open): image via `<img>` (presigned URL from `useGetPresignedUrl`), PDF via `<iframe>`/`<embed>`, `text/*` + `text/csv` + `text/markdown` via client fetch + `<pre>`, otherwise a "preview not available" fallback with the download action
+  - [ ] Wire a "View details" trigger into `FilesTableRow` (action icon + clickable file name) that opens the dialog; add to `components/index.ts` barrel
+  - [ ] Tests: mock `@/features/files/hooks` to cover dialog metadata + preview fallback + loading/error; extend the row test for the view trigger
+  - [ ] Verify: `bun run lint`, `bunx tsc --noEmit`, `bun run test` green; manual preview of image, PDF, text, and an unsupported type (fallback)
+
+- [ ] **4. Copy link + presigned-URL expiry countdown**
+  - [ ] Add a pure `formatDuration(ms)` (and `formatRemaining(expiresAt, now?)` if useful) to `src/features/files/utils/index.ts` + unit test (0, sub-minute, minutes, expired/negative)
+  - [ ] Add `useCountdown(expiresAt)` in `src/hooks/use-countdown.ts` (+ barrel): returns `remainingMs` + `isExpired`, 1 s tick with `clearInterval` cleanup, SSR/hydration-safe
+  - [ ] Add `src/features/files/components/copy-link-button.tsx`: `navigator.clipboard.writeText` with a feature-detected fallback (insecure-context safe, mirroring the `makeId` guard); disabled + "Expired" past `expiresAt`; accessible "Copied" status via `aria-live`
+  - [ ] Integrate into the row/detail presign result: next to the download action show the copy button + live "expires in mm:ss"; once expired, disable download/copy and offer "Get a new link" (re-run `useGetPresignedUrl`)
+  - [ ] Tests: `formatDuration` unit; `useCountdown` with fake timers (counts down, hits expired); `CopyLinkButton` (clipboard mock, copied feedback, disabled when expired)
+  - [ ] Verify: `bun run lint`, `bunx tsc --noEmit`, `bun run test` green; manual — copy link puts the presigned URL on the clipboard, countdown reaches expiry, re-presign works
+
+- [ ] **5. Optimistic delete**
+  - [ ] Extend `useDeleteFile` (`hooks/use-delete-file.ts`) with `onMutate`: `cancelQueries({ queryKey: queryKeys.files.all })`, snapshot every `files.list` cache, `setQueriesData` to drop the id from `items` (and decrement `total`); return the snapshots as context
+  - [ ] `onError`: roll back each snapshot from the returned context
+  - [ ] `onSettled`: keep invalidating `queryKeys.files.all` and also invalidate/remove `queryKeys.files.detail(id)`
+  - [ ] Adjust `FilesTableRow` delete UX: close the `AlertDialog` immediately on confirm (stop waiting on `mutateAsync`) and rely on the optimistic row removal
+  - [ ] Add failure feedback that survives the row unmount/rollback: shadcn `sonner` (`bunx --bun shadcn@latest add -y sonner`) + `<Toaster />` in `src/providers/index.tsx`; fire a toast on delete error ("Couldn't delete …") and optionally on success
+  - [ ] Tests: unit-test `useDeleteFile` optimistic behavior — seed a `QueryClient` `files.list` cache, mock `apiClient.delete` resolving (item removed, then refetch) and rejecting (item restored), assert snapshot rollback
+  - [ ] Verify: `bun run lint`, `bunx tsc --noEmit`, `bun run test` green; manual — row disappears instantly, reappears with a toast when the BE returns `FILE_NOT_FOUND`, final list reconciles after invalidation
+<!-- END:files-enhancements -->
