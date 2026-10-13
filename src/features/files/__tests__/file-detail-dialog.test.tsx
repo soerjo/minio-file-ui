@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -119,6 +119,54 @@ describe('FileDetailDialog', () => {
     renderDialog(makeFileUpload({ originalName: 'photo.png', mimeType: 'image/png' }));
 
     expect(screen.getByRole('img', { name: 'photo.png' })).toBeInTheDocument();
+  });
+
+  it('shows an image skeleton until the image loads', () => {
+    mockUseGetFile.mockReturnValue({
+      ...fileResult(),
+      data: { success: true, data: makeFileUpload({ originalName: 'photo.png', mimeType: 'image/png' }) },
+    });
+
+    renderDialog(makeFileUpload({ originalName: 'photo.png', mimeType: 'image/png' }));
+
+    expect(screen.getByTestId('image-preview-skeleton')).toBeInTheDocument();
+
+    fireEvent.load(screen.getByRole('img', { name: 'photo.png' }));
+
+    expect(screen.queryByTestId('image-preview-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('shows an image error state and retries on demand', async () => {
+    mockUseGetFile.mockReturnValue({
+      ...fileResult(),
+      data: { success: true, data: makeFileUpload({ originalName: 'photo.png', mimeType: 'image/png' }) },
+    });
+
+    renderDialog(makeFileUpload({ originalName: 'photo.png', mimeType: 'image/png' }));
+
+    fireEvent.error(screen.getByRole('img', { name: 'photo.png' }));
+
+    expect(screen.getByText('Failed to load image preview.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(screen.getByTestId('image-preview-skeleton')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'photo.png' })).toBeInTheDocument();
+  });
+
+  it('shows a pdf skeleton until the iframe loads', () => {
+    mockUseGetFile.mockReturnValue({
+      ...fileResult(),
+      data: { success: true, data: makeFileUpload({ originalName: 'doc.pdf', mimeType: 'application/pdf' }) },
+    });
+
+    renderDialog(makeFileUpload({ originalName: 'doc.pdf', mimeType: 'application/pdf' }));
+
+    expect(screen.getByTestId('pdf-preview-skeleton')).toBeInTheDocument();
+
+    fireEvent.load(screen.getByTitle('Preview of doc.pdf'));
+
+    expect(screen.queryByTestId('pdf-preview-skeleton')).not.toBeInTheDocument();
   });
 
   it('renders a text preview for text files', async () => {

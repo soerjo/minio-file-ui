@@ -64,6 +64,71 @@ function TextPreview({ url }: { url: string }) {
   );
 }
 
+type PreviewStatus = 'loading' | 'loaded' | 'error';
+
+function ImagePreview({ url, alt }: { url: string; alt: string }) {
+  const [status, setStatus] = useState<PreviewStatus>('loading');
+  const [attempt, setAttempt] = useState(0);
+
+  if (status === 'error') {
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+        <p>Failed to load image preview.</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={() => {
+            setStatus('loading');
+            setAttempt((value) => value + 1);
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex h-[50vh] items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/30">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={attempt}
+        src={url}
+        alt={alt}
+        onLoad={() => setStatus('loaded')}
+        onError={() => setStatus('error')}
+        className="max-h-full w-auto object-contain"
+      />
+      {status === 'loading' && (
+        <div
+          data-testid="image-preview-skeleton"
+          aria-hidden="true"
+          className="absolute inset-0 animate-pulse rounded-lg bg-muted"
+        />
+      )}
+    </div>
+  );
+}
+
+function PdfPreview({ url, title }: { url: string; title: string }) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="relative h-[50vh] w-full overflow-hidden rounded-lg border border-border bg-muted/30">
+      <iframe src={url} title={title} onLoad={() => setLoaded(true)} className="h-full w-full" />
+      {!loaded && (
+        <div
+          data-testid="pdf-preview-skeleton"
+          aria-hidden="true"
+          className="absolute inset-0 animate-pulse rounded-lg bg-muted"
+        />
+      )}
+    </div>
+  );
+}
+
 function FilePreview({ file }: { file: FileUpload }) {
   const { mutate: fetchUrl, data, isPending, isError, error } = useGetPresignedUrl();
   const { isExpired } = useCountdown(data?.data?.expiresAt ?? null);
@@ -98,20 +163,9 @@ function FilePreview({ file }: { file: FileUpload }) {
   let preview: ReactNode;
 
   if (kind === 'image') {
-    preview = (
-      <div className="flex justify-center overflow-hidden rounded-lg border border-border bg-muted/30">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={file.originalName} className="max-h-[50vh] w-auto object-contain" />
-      </div>
-    );
+    preview = <ImagePreview url={url} alt={file.originalName} />;
   } else if (kind === 'pdf') {
-    preview = (
-      <iframe
-        src={url}
-        title={`Preview of ${file.originalName}`}
-        className="h-[50vh] w-full rounded-lg border border-border bg-muted/30"
-      />
-    );
+    preview = <PdfPreview url={url} title={`Preview of ${file.originalName}`} />;
   } else if (kind === 'text') {
     preview = <TextPreview key={url} url={url} />;
   } else {
