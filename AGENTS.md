@@ -61,6 +61,11 @@ Bun only. Run scripts with `bun run <script>` and binaries with `bunx`.
 
 See `AUTH_SYSTEM.md` for complete auth architecture (JWT, token refresh, API client with automatic auth headers, auth events).
 
+## Deployment (prod)
+
+- `docker-compose.prod.yml` — single `app` service (container `minio-file-ui`): builds `./Dockerfile` with `NEXT_PUBLIC_API_URL` (direct browser→BE base, mirrors `.env.local`) + `NEXT_PUBLIC_APP_NAME` baked into the client bundle, maps `3200:3000` (runner `EXPOSE 3000`), `restart: unless-stopped`, joins the external `internal_net` network (reserved for future server-side BE calls — the FE itself reaches the BE from the browser via the host Tailscale IP). No runtime env/secrets; everything is baked at build time.
+- Validate with `docker compose -f docker-compose.prod.yml config`; run with `docker compose -f docker-compose.prod.yml up -d --build`.
+
 <!-- BEGIN:heroui-to-shadcn-migration -->
 ## HeroUI → shadcn/ui migration checklist
 
