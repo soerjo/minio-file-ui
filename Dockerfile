@@ -11,6 +11,11 @@ FROM oven/bun:1 AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# API_PROXY_TARGET is read by next.config.ts rewrites() at build time and baked
+# into .next/routes-manifest.json; the destination must be resolvable at runtime.
+ARG API_PROXY_TARGET="http://minio-file-service:3000"
+ENV API_PROXY_TARGET=$API_PROXY_TARGET
+
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time.
 ARG NEXT_PUBLIC_APP_NAME="My App"
 ARG NEXT_PUBLIC_APP_URL=""
