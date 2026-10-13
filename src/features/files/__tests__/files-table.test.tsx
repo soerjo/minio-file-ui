@@ -1,21 +1,44 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FilesTable } from '@/features/files/components/files-table';
 import { makeFileUpload, makeFilesListResponse } from './factories';
 
-const { mockUseFilesList, mockUseDeleteFile, mockUseGetPresignedUrl } = vi.hoisted(() => ({
+const { mockUseFilesList, mockUseDeleteFile, mockUseGetPresignedUrl, mockUseFilesQueryParams } = vi.hoisted(() => ({
   mockUseFilesList: vi.fn(),
   mockUseDeleteFile: vi.fn(),
   mockUseGetPresignedUrl: vi.fn(),
+  mockUseFilesQueryParams: vi.fn(),
 }));
 
 vi.mock('@/features/files/hooks', () => ({
   useFilesList: () => mockUseFilesList(),
   useDeleteFile: () => mockUseDeleteFile(),
   useGetPresignedUrl: () => mockUseGetPresignedUrl(),
+  useFilesQueryParams: () => mockUseFilesQueryParams(),
 }));
+
+type QueryParams = {
+  page: number;
+  search: string;
+  sort: 'createdAt:desc' | 'createdAt:asc' | 'originalName:asc';
+  setPage: ReturnType<typeof vi.fn>;
+  setSearch: ReturnType<typeof vi.fn>;
+  setSort: ReturnType<typeof vi.fn>;
+};
+
+function queryParams(overrides: Partial<QueryParams> = {}): QueryParams {
+  return {
+    page: 1,
+    search: '',
+    sort: 'createdAt:desc',
+    setPage: vi.fn(),
+    setSearch: vi.fn(),
+    setSort: vi.fn(),
+    ...overrides,
+  };
+}
 
 type ListResult = {
   data: unknown;
@@ -41,6 +64,7 @@ function listResult(overrides: Partial<ListResult> = {}): ListResult {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseFilesList.mockReturnValue(listResult());
+  mockUseFilesQueryParams.mockReturnValue(queryParams());
   mockUseDeleteFile.mockReturnValue({
     reset: vi.fn(),
     mutateAsync: vi.fn().mockResolvedValue({}),
@@ -87,18 +111,15 @@ describe('FilesTable', () => {
     expect(screen.getByText('No files yet.')).toBeInTheDocument();
   });
 
-  it('renders the search-specific empty state after typing a search term', async () => {
+  it('renders the search-specific empty state when a search term is active', () => {
     mockUseFilesList.mockReturnValue(
       listResult({ data: { success: true, data: makeFilesListResponse({ items: [], total: 0 }) } }),
     );
+    mockUseFilesQueryParams.mockReturnValue(queryParams({ search: 'nope' }));
 
     render(<FilesTable />);
 
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search files' }), 'nope');
-
-    await waitFor(() => expect(screen.getByText('No files match your search.')).toBeInTheDocument(), {
-      timeout: 2000,
-    });
+    expect(screen.getByText('No files match your search.')).toBeInTheDocument();
   });
 
   it('renders a row per file', () => {
@@ -127,8 +148,10 @@ describe('FilesTable', () => {
     mockUseFilesList.mockReturnValue(
       listResult({ data: { success: true, data: makeFilesListResponse({ total: 25 }) } }),
     );
+    const params = queryParams({ page: 1 });
+    mockUseFilesQueryParams.mockReturnValue(params);
 
-    render(<FilesTable />);
+    const { rerender } = render(<FilesTable />);
 
     const previous = screen.getByRole('button', { name: 'Previous' });
     const next = screen.getByRole('button', { name: 'Next' });
@@ -138,8 +161,13 @@ describe('FilesTable', () => {
 
     await userEvent.click(next);
 
+    expect(params.setPage).toHaveBeenCalledWith(2);
+
+    mockUseFilesQueryParams.mockReturnValue(queryParams({ page: 2 }));
+    rerender(<FilesTable />);
+
     expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
-    expect(previous).toBeEnabled();
-    expect(next).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
 });

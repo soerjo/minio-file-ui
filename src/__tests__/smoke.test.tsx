@@ -21,6 +21,8 @@ vi.mock('next-themes', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 describe('LoginForm', () => {

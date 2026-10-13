@@ -1,6 +1,15 @@
-'use client';
-
+import { Suspense } from 'react';
 import { FilesTable, UploadDropzone } from '@/features/files/components';
+
+function FilesTableFallback() {
+  return (
+    <div className="space-y-2" aria-label="Loading files">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="h-12 animate-pulse rounded-lg bg-muted" />
+      ))}
+    </div>
+  );
+}
 
 export default function FilesPage() {
   return (
@@ -11,7 +20,9 @@ export default function FilesPage() {
       </div>
       <div className="space-y-8">
         <UploadDropzone />
-        <FilesTable />
+        <Suspense fallback={<FilesTableFallback />}>
+          <FilesTable />
+        </Suspense>
       </div>
     </div>
   );
