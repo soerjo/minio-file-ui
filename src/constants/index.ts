@@ -1,7 +1,6 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'My App';
 
 export const ROUTES = {
-  home: '/',
   files: '/files',
   login: '/login',
   register: '/register',

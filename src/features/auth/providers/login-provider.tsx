@@ -28,7 +28,7 @@ export function LoginProvider({ children }: { children: ReactNode }) {
         TokenManager.setAccessToken(response.data.accessToken);
         TokenManager.setRefreshToken(response.data.refreshToken);
         queryClient.invalidateQueries({ queryKey: queryKeys.auth.verify });
-        router.push(ROUTES.home);
+        router.push(ROUTES.files);
       }
     },
   });

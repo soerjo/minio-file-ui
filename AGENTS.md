@@ -246,3 +246,32 @@ Bounded, ordered checklist for the files feature (upload + list + download + del
   - [x] Optional runtime smoke on `bun run dev` against the BE: login → upload (happy path + >25 MB rejection + non-whitelisted MIME rejection) → list/search/sort/paginate → presigned download → delete → row gone from list; token refresh mid-session still works — route-level smoke verified by parent: `/login` 200, `/files` 200, `/forgot-password` 404 (removed route) as expected; full upload→download→delete round-trip not exercised (bullet was optional)
   - [x] Audit: all files endpoints/keys flow through `API_ROUTES` + `queryKeys` (no inline literals); semantic tokens only (no `zinc-*`/hardcoded colors) — holds by construction from steps 1–3: hooks/pages use `API_ROUTES.files.*`/`fileRoutes(id)`/`queryKeys.files.*` exclusively; step-3 rg audit found no `zinc-*`/hardcoded colors in feature code (only registry-shipped `dark:` variants inside generated `select.tsx`)
 <!-- END:files-page-feature -->
+
+<!-- BEGIN:remove-dashboard-files-default -->
+## Remove dashboard, /files as default after login
+
+Bounded, ordered checklist to remove the dashboard/home route and make `/files` the default landing page after login. Bun only (never npm). Validate each step independently before moving on.
+
+- [x] **1. Delete home feature + landing page**
+  - [x] Delete `src/features/home/` (`home-hero.tsx` + barrel `index.ts`)
+  - [x] Delete `src/app/(main)/page.tsx`
+  - [x] Verify: no references to `@/features/home` remain (`rg 'features/home' src/` clean); `bun run lint`
+
+- [x] **2. Remove `home` route**
+  - [x] Remove `home: '/'` from `ROUTES` in `src/constants/index.ts`
+  - [x] Verify: no `ROUTES.home` references remain (`rg 'ROUTES\\.home' src/` clean)
+
+- [x] **3. Redirect to `/files` after login**
+  - [x] Update `ROUTES.home` usage → `ROUTES.files` in `src/features/auth/hooks/use-auth.tsx` (`GuestRoute`)
+  - [x] Update `ROUTES.home` usage → `ROUTES.files` in `src/features/auth/providers/login-provider.tsx`
+  - [x] Verify: `bun run lint`
+
+- [x] **4. Update `AppHeader` brand + nav links**
+  - [x] Update brand link and nav links from `/` to `ROUTES.files` in `src/components/layouts/app-header.tsx`
+  - [x] Verify: no bare `href="/"` remain in the header (`rg 'href=\"/\"' src/components/layouts/app-header.tsx` clean)
+
+- [x] **5. Final verification**
+  - [x] `bun run lint` exit 0
+  - [x] `bunx tsc --noEmit` 0 errors
+  - [x] `bun run build` success
+<!-- END:remove-dashboard-files-default -->

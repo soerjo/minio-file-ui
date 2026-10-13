@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { useAuth as useAuthContext } from "@/features/auth/providers/auth-provider";
-import { useIsMounted } from "@/hooks";
-import { ROUTES } from "@/constants";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import { useAuth as useAuthContext } from '@/features/auth/providers/auth-provider';
+import { useIsMounted } from '@/hooks';
+import { ROUTES } from '@/constants';
 
 export function useAuth() {
   return useAuthContext();
@@ -40,7 +40,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
-      router.push(ROUTES.home);
+      router.push(ROUTES.files);
     }
   }, [isAuthenticated, isAuthLoading, router]);
 

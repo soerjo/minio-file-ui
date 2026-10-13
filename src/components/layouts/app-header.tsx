@@ -11,10 +11,7 @@ import { useAuth } from '@/features/auth/hooks';
 import { useIsMounted } from '@/hooks';
 import { cn } from '@/utils';
 
-const NAV_LINKS = [
-  { href: ROUTES.home, label: 'Home' },
-  { href: ROUTES.files, label: 'Files' },
-] as const;
+const NAV_LINKS = [{ href: ROUTES.files, label: 'Files' }] as const;
 
 export function AppHeader() {
   const { logout, isLoading } = useAuth();
@@ -26,15 +23,12 @@ export function AppHeader() {
 
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-border">
-      <Link href="/" className="text-lg font-semibold">
+      <Link href={ROUTES.files} className="text-lg font-semibold">
         My App
       </Link>
       <nav className="flex items-center gap-4">
         {NAV_LINKS.map((link) => {
-          const isActive =
-            link.href === ROUTES.home
-              ? pathname === ROUTES.home
-              : pathname === link.href || pathname.startsWith(`${link.href}/`);
+          const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
 
           return (
             <Link
