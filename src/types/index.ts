@@ -1,1 +1,1 @@
-export type { ApiResponse } from "./api";
+export type { ApiErrorEnvelope, ApiResponse } from './api';

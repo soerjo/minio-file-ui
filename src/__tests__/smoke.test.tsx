@@ -19,6 +19,10 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }),
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/',
+}));
+
 describe('LoginForm', () => {
   it('renders the Sign In heading and email field', () => {
     render(<LoginForm />);
@@ -56,5 +60,13 @@ describe('AppHeader', () => {
     render(<AppHeader />);
 
     expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+  });
+
+  it('renders the Home and Files nav links with the active state on the current route', () => {
+    render(<AppHeader />);
+
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Files' })).toHaveAttribute('href', '/files');
+    expect(screen.getByRole('link', { name: 'Files' })).not.toHaveAttribute('aria-current');
   });
 });
