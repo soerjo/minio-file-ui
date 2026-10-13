@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/utils';
 import { useUploadFile } from '@/features/files/hooks';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from '@/features/files/constants';
-import { formatBytes } from '@/features/files/utils';
+import { formatBytes, makeId } from '@/features/files/utils';
 
 const ACCEPT_ATTR = ALLOWED_MIME_TYPES.join(',');
 
@@ -77,7 +77,7 @@ export function UploadDropzone() {
   const dragDepthRef = useRef(0);
 
   const addFiles = useCallback((files: FileList | File[]) => {
-    const items = Array.from(files, (file) => ({ id: crypto.randomUUID(), file }));
+    const items = Array.from(files, (file) => ({ id: makeId(), file }));
     if (items.length > 0) {
       setQueue((previous) => [...previous, ...items]);
     }

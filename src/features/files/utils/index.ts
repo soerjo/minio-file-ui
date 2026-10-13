@@ -22,3 +22,5 @@ export function formatDate(iso: string): string {
     minute: '2-digit',
   }).format(date);
 }
+
+export { makeId } from './uuid';
