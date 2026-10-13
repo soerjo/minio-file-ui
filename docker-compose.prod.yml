@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: "http://100.92.245.124:3110/api"
+        NEXT_PUBLIC_API_URL: "http://100.92.245.124:3110"
         NEXT_PUBLIC_APP_NAME: "MinIO File App"
     container_name: minio-file-ui
     ports:
