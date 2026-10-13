@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { formatBytes, formatDate, makeId } from '@/features/files/utils';
+import { formatBytes, formatDate, formatDuration, formatRemaining, makeId } from '@/features/files/utils';
 
 describe('formatBytes', () => {
   it('formats zero as 0 B', () => {
@@ -28,6 +28,50 @@ describe('formatBytes', () => {
 
   it('caps the unit scaling at TB', () => {
     expect(formatBytes(1024 ** 5)).toBe('1024.0 TB');
+  });
+});
+
+describe('formatDuration', () => {
+  it('formats zero as 0:00', () => {
+    expect(formatDuration(0)).toBe('0:00');
+  });
+
+  it('clamps negative and non-finite values to 0:00', () => {
+    expect(formatDuration(-1000)).toBe('0:00');
+    expect(formatDuration(Number.NaN)).toBe('0:00');
+    expect(formatDuration(Number.POSITIVE_INFINITY)).toBe('0:00');
+  });
+
+  it('keeps sub-minute durations zero-padded', () => {
+    expect(formatDuration(500)).toBe('0:00');
+    expect(formatDuration(45_000)).toBe('0:45');
+    expect(formatDuration(59_999)).toBe('0:59');
+  });
+
+  it('formats whole minutes and mixed durations', () => {
+    expect(formatDuration(60_000)).toBe('1:00');
+    expect(formatDuration(65_000)).toBe('1:05');
+    expect(formatDuration(600_000)).toBe('10:00');
+  });
+});
+
+describe('formatRemaining', () => {
+  it('subtracts the current time from the expiry', () => {
+    const now = Date.parse('2026-01-15T12:00:00.000Z');
+
+    expect(formatRemaining('2026-01-15T12:01:00.000Z', now)).toBe('1:00');
+    expect(formatRemaining('2026-01-15T12:00:45.000Z', now)).toBe('0:45');
+  });
+
+  it('returns 0:00 once expired', () => {
+    const now = Date.parse('2026-01-15T12:00:00.000Z');
+
+    expect(formatRemaining('2026-01-15T11:59:00.000Z', now)).toBe('0:00');
+    expect(formatRemaining('2026-01-15T12:00:00.000Z', now)).toBe('0:00');
+  });
+
+  it('returns 0:00 for an unparseable expiry', () => {
+    expect(formatRemaining('not-a-date', Date.parse('2026-01-15T12:00:00.000Z'))).toBe('0:00');
   });
 });
 

@@ -12,5 +12,6 @@ export const queryKeys = {
   files: {
     all: ['files'] as const,
     list: (filters: FilesListParams = {}) => ['files', 'list', filters] as const,
+    detail: (id: string) => ['files', 'detail', id] as const,
   },
 } as const;

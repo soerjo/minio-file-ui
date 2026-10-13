@@ -5,17 +5,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FilesTable } from '@/features/files/components/files-table';
 import { makeFileUpload, makeFilesListResponse } from './factories';
 
-const { mockUseFilesList, mockUseDeleteFile, mockUseGetPresignedUrl, mockUseFilesQueryParams } = vi.hoisted(() => ({
-  mockUseFilesList: vi.fn(),
-  mockUseDeleteFile: vi.fn(),
-  mockUseGetPresignedUrl: vi.fn(),
-  mockUseFilesQueryParams: vi.fn(),
-}));
+const { mockUseFilesList, mockUseDeleteFile, mockUseGetPresignedUrl, mockUseGetFile, mockUseFilesQueryParams } =
+  vi.hoisted(() => ({
+    mockUseFilesList: vi.fn(),
+    mockUseDeleteFile: vi.fn(),
+    mockUseGetPresignedUrl: vi.fn(),
+    mockUseGetFile: vi.fn(),
+    mockUseFilesQueryParams: vi.fn(),
+  }));
 
 vi.mock('@/features/files/hooks', () => ({
   useFilesList: () => mockUseFilesList(),
   useDeleteFile: () => mockUseDeleteFile(),
   useGetPresignedUrl: () => mockUseGetPresignedUrl(),
+  useGetFile: (id: string | undefined) => mockUseGetFile(id),
   useFilesQueryParams: () => mockUseFilesQueryParams(),
 }));
 
@@ -73,9 +76,19 @@ beforeEach(() => {
   });
   mockUseGetPresignedUrl.mockReturnValue({
     reset: vi.fn(),
+    mutate: vi.fn(),
     mutateAsync: vi.fn().mockResolvedValue({ data: { url: 'https://minio.test/file' } }),
+    data: { data: { url: 'https://minio.test/file' } },
     error: null,
     isPending: false,
+    isError: false,
+  });
+  mockUseGetFile.mockReturnValue({
+    data: { success: true, data: makeFileUpload() },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
   });
 });
 
