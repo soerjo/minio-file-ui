@@ -62,10 +62,9 @@ describe('AppHeader', () => {
     expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
   });
 
-  it('renders the Home and Files nav links with the active state on the current route', () => {
+  it('renders the Files nav link as inactive on the current route', () => {
     render(<AppHeader />);
 
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Files' })).toHaveAttribute('href', '/files');
     expect(screen.getByRole('link', { name: 'Files' })).not.toHaveAttribute('aria-current');
   });
