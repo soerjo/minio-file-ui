@@ -1,15 +1,18 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FilesTableRow } from '@/features/files/components/files-table-row';
 import { makeFileUpload } from './factories';
 
-const { mockUseDeleteFile, mockUseGetPresignedUrl, mockUseGetFile } = vi.hoisted(() => ({
+const { mockUseDeleteFile, mockUseGetPresignedUrl, mockUseGetFile, mockToast } = vi.hoisted(() => ({
   mockUseDeleteFile: vi.fn(),
   mockUseGetPresignedUrl: vi.fn(),
   mockUseGetFile: vi.fn(),
+  mockToast: { success: vi.fn(), error: vi.fn() },
 }));
+
+vi.mock('sonner', () => ({ toast: mockToast }));
 
 vi.mock('@/features/files/hooks', () => ({
   useDeleteFile: () => mockUseDeleteFile(),
@@ -95,6 +98,22 @@ describe('FilesTableRow', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     expect(mutateAsync).toHaveBeenCalledWith('file-1');
+    await waitFor(() => expect(mockToast.success).toHaveBeenCalled());
+  });
+
+  it('shows an error toast when the delete fails', async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error('FILE_NOT_FOUND'));
+    mockUseDeleteFile.mockReturnValue({ reset: vi.fn(), mutateAsync, error: null, isPending: false });
+
+    renderRow();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete report.pdf' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(mockToast.error).toHaveBeenCalled());
+    expect(mockToast.error.mock.calls[0]?.[0]).toBe('Couldn\u2019t delete \u201creport.pdf\u201d');
   });
 
   it('opens the detail dialog from the view action using the row file id', async () => {

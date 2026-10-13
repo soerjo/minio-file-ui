@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent } from 'react';
 import { Download, Eye, File, FileImage, FileSpreadsheet, FileText, Loader2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,11 +62,15 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
 
   const handleConfirmDelete = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    if (deleteFile.isPending) return;
+    setIsConfirmOpen(false);
     deleteFile
       .mutateAsync(file.id)
-      .then(() => setIsConfirmOpen(false))
-      .catch(() => null);
+      .then(() => {
+        toast.success(`Deleted “${file.originalName}”`);
+      })
+      .catch((error: Error) => {
+        toast.error(`Couldn’t delete “${file.originalName}”`, { description: error.message });
+      });
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -162,7 +167,6 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
                 Are you sure you want to delete “{file.originalName}”? The file will be removed from your list.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {deleteFile.error && <p className="text-sm text-destructive">{deleteFile.error.message}</p>}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleteFile.isPending}>Cancel</AlertDialogCancel>
               <AlertDialogAction variant="destructive" onClick={handleConfirmDelete} disabled={deleteFile.isPending}>

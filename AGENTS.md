@@ -318,12 +318,12 @@ Bounded, ordered checklist for 5 frontend enhancements on top of the existing fi
   - [x] Tests: `formatDuration` unit; `useCountdown` with fake timers (counts down, hits expired); `CopyLinkButton` (clipboard mock, copied feedback, disabled when expired)
   - [x] Verify: `bun run lint`, `bunx tsc --noEmit`, `bun run test` green; manual — copy link puts the presigned URL on the clipboard, countdown reaches expiry, re-presign works
 
-- [ ] **5. Optimistic delete**
-  - [ ] Extend `useDeleteFile` (`hooks/use-delete-file.ts`) with `onMutate`: `cancelQueries({ queryKey: queryKeys.files.all })`, snapshot every `files.list` cache, `setQueriesData` to drop the id from `items` (and decrement `total`); return the snapshots as context
-  - [ ] `onError`: roll back each snapshot from the returned context
-  - [ ] `onSettled`: keep invalidating `queryKeys.files.all` and also invalidate/remove `queryKeys.files.detail(id)`
-  - [ ] Adjust `FilesTableRow` delete UX: close the `AlertDialog` immediately on confirm (stop waiting on `mutateAsync`) and rely on the optimistic row removal
-  - [ ] Add failure feedback that survives the row unmount/rollback: shadcn `sonner` (`bunx --bun shadcn@latest add -y sonner`) + `<Toaster />` in `src/providers/index.tsx`; fire a toast on delete error ("Couldn't delete …") and optionally on success
-  - [ ] Tests: unit-test `useDeleteFile` optimistic behavior — seed a `QueryClient` `files.list` cache, mock `apiClient.delete` resolving (item removed, then refetch) and rejecting (item restored), assert snapshot rollback
-  - [ ] Verify: `bun run lint`, `bunx tsc --noEmit`, `bun run test` green; manual — row disappears instantly, reappears with a toast when the BE returns `FILE_NOT_FOUND`, final list reconciles after invalidation
+- [x] **5. Optimistic delete**
+  - [x] Extend `useDeleteFile` (`hooks/use-delete-file.ts`) with `onMutate`: `cancelQueries({ queryKey: queryKeys.files.all })`, snapshot every `files.list` cache, `setQueriesData` to drop the id from `items` (and decrement `total`); return the snapshots as context
+  - [x] `onError`: roll back each snapshot from the returned context
+  - [x] `onSettled`: keep invalidating `queryKeys.files.all` and also invalidate/remove `queryKeys.files.detail(id)`
+  - [x] Adjust `FilesTableRow` delete UX: close the `AlertDialog` immediately on confirm (stop waiting on `mutateAsync`) and rely on the optimistic row removal
+  - [x] Add failure feedback that survives the row unmount/rollback: shadcn `sonner` (`bunx --bun shadcn@latest add -y sonner`) + `<Toaster />` in `src/providers/index.tsx`; fire a toast on delete error ("Couldn't delete …") and optionally on success
+  - [x] Tests: unit-test `useDeleteFile` optimistic behavior — seed a `QueryClient` `files.list` cache, mock `apiClient.delete` resolving (item removed, then refetch) and rejecting (item restored), assert snapshot rollback
+  - [x] Verify: `bun run lint`, `bunx tsc --noEmit`, `bun run test` green; manual — row disappears instantly, reappears with a toast when the BE returns `FILE_NOT_FOUND`, final list reconciles after invalidation
 <!-- END:files-enhancements -->

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '@/__tests__/test-utils';
 import { API_ROUTES, fileRoutes } from '@/constants';
 import { apiClient, queryKeys } from '@/lib';
+import type { FilesListResponse } from '@/features/files/types';
 import { useDeleteFile, useFilesList, useGetPresignedUrl } from '@/features/files/hooks';
 import { makeFilesListResponse, makeFileUpload } from './factories';
 
@@ -62,6 +63,64 @@ describe('useDeleteFile', () => {
 
     expect(deleteSpy).toHaveBeenCalledWith(fileRoutes.detail('file-9'));
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.files.all });
+  });
+
+  it('optimistically drops the id and decrements total across list caches', async () => {
+    const client = createQueryClient();
+    const filters = { page: 1, limit: 20 };
+    const seeded = makeFilesListResponse({
+      items: [makeFileUpload({ id: 'file-1' }), makeFileUpload({ id: 'file-2' })],
+      total: 2,
+    });
+    client.setQueryData(queryKeys.files.list(filters), seeded);
+
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(apiClient, 'delete').mockImplementation(async () => {
+      await pending;
+      return { success: true, data: makeFileUpload({ id: 'file-1', status: 'DELETED' }) };
+    });
+
+    const { result } = renderHook(() => useDeleteFile(), { wrapper: createWrapper(client) });
+
+    let mutation: Promise<unknown>;
+    await act(async () => {
+      mutation = result.current.mutateAsync('file-1');
+      await Promise.resolve();
+    });
+
+    const optimistic = client.getQueryData<FilesListResponse>(queryKeys.files.list(filters));
+    expect(optimistic?.items.map((item) => item.id)).toEqual(['file-2']);
+    expect(optimistic?.total).toBe(1);
+
+    await act(async () => {
+      release();
+      await mutation;
+    });
+  });
+
+  it('rolls back the list cache when the delete fails', async () => {
+    const client = createQueryClient();
+    const filters = { page: 1, limit: 20 };
+    const seeded = makeFilesListResponse({
+      items: [makeFileUpload({ id: 'file-1' }), makeFileUpload({ id: 'file-2' })],
+      total: 2,
+    });
+    client.setQueryData(queryKeys.files.list(filters), seeded);
+
+    vi.spyOn(apiClient, 'delete').mockRejectedValue(new Error('FILE_NOT_FOUND'));
+
+    const { result } = renderHook(() => useDeleteFile(), { wrapper: createWrapper(client) });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync('file-1')).rejects.toThrow('FILE_NOT_FOUND');
+    });
+
+    const restored = client.getQueryData<FilesListResponse>(queryKeys.files.list(filters));
+    expect(restored?.items.map((item) => item.id)).toEqual(['file-1', 'file-2']);
+    expect(restored?.total).toBe(2);
   });
 });
 

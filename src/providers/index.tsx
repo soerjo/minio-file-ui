@@ -1,6 +1,7 @@
 import { ThemeProvider } from 'next-themes';
 
 import { QueryProvider } from './query-provider';
+import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/features/auth/providers/auth-provider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryProvider>
         <AuthProvider>{children}</AuthProvider>
       </QueryProvider>
+      <Toaster />
     </ThemeProvider>
   );
 }
