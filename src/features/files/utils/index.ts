@@ -1,3 +1,20 @@
+import type { FileUpload } from '@/features/files/types';
+
+export interface StatusBadge {
+  label: string;
+  className: string;
+}
+
+export function getStatusBadge(file: Pick<FileUpload, 'status' | 'isDeleted'>): StatusBadge {
+  if (file.isDeleted) {
+    return { label: 'Deleted', className: 'bg-destructive/10 text-destructive' };
+  }
+  if (file.status === 'ORPHAN') {
+    return { label: 'Orphan', className: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' };
+  }
+  return { label: 'Active', className: 'bg-primary/10 text-primary' };
+}
+
 export function formatBytes(bytes: number, decimals = 1): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '—';
   if (bytes === 0) return '0 B';

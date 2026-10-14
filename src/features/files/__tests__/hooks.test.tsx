@@ -80,7 +80,7 @@ describe('useDeleteFile', () => {
     });
     vi.spyOn(apiClient, 'delete').mockImplementation(async () => {
       await pending;
-      return { success: true, data: makeFileUpload({ id: 'file-1', status: 'DELETED' }) };
+      return { success: true, data: makeFileUpload({ id: 'file-1', isDeleted: true }) };
     });
 
     const { result } = renderHook(() => useDeleteFile(), { wrapper: createWrapper(client) });

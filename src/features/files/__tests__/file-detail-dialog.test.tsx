@@ -77,6 +77,42 @@ describe('FileDetailDialog', () => {
     expect(screen.getByText('2.0 KB')).toBeInTheDocument();
   });
 
+  it('shows the deletion metadata for a deleted file', () => {
+    const file = makeFileUpload({
+      isDeleted: true,
+      status: 'ORPHAN',
+      deletedBy: 'admin-9',
+      deletedAt: '2026-02-01T09:30:00.000Z',
+    });
+    mockUseGetFile.mockReturnValue({ ...fileResult(), data: { success: true, data: file } });
+
+    renderDialog(file);
+
+    expect(screen.getByText('Deleted')).toBeInTheDocument();
+    expect(screen.getByText('Deleted by')).toBeInTheDocument();
+    expect(screen.getByText('admin-9')).toBeInTheDocument();
+    expect(screen.getByText('Deleted at')).toBeInTheDocument();
+  });
+
+  it('omits the deletion metadata for a non-deleted file', () => {
+    renderDialog(makeFileUpload());
+
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.queryByText('Deleted by')).not.toBeInTheDocument();
+    expect(screen.queryByText('Deleted at')).not.toBeInTheDocument();
+  });
+
+  it('falls back to a dash when deleted fields are missing', () => {
+    const file = makeFileUpload({ isDeleted: true, deletedBy: null, deletedAt: null });
+    mockUseGetFile.mockReturnValue({ ...fileResult(), data: { success: true, data: file } });
+
+    renderDialog(file);
+
+    expect(screen.getByText('Deleted by')).toBeInTheDocument();
+    expect(screen.getByText('Deleted at')).toBeInTheDocument();
+    expect(screen.getAllByText('-')).toHaveLength(2);
+  });
+
   it('shows a loading state while the details are pending', () => {
     mockUseGetFile.mockReturnValue(fileResult({ isPending: true, data: undefined }));
 
