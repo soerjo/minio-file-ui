@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useCountdown } from '@/hooks';
 import { useGetFile, useGetPresignedUrl } from '@/features/files/hooks';
 import type { FileUpload } from '@/features/files/types';
-import { formatBytes, formatDate, openInNewTab } from '@/features/files/utils';
+import { formatBytes, formatDate, getStatusBadge, openInNewTab } from '@/features/files/utils';
 import { CopyLinkButton } from './copy-link-button';
 
 type PreviewKind = 'image' | 'pdf' | 'text' | 'none';
@@ -214,10 +214,16 @@ function MetadataList({ file }: { file: FileUpload }) {
     { label: 'Name', value: file.originalName },
     { label: 'Type', value: file.mimeType },
     { label: 'Size', value: formatBytes(file.size) },
-    { label: 'Status', value: file.status === 'ACTIVE' ? 'Active' : 'Deleted' },
+    { label: 'Status', value: getStatusBadge(file).label },
     { label: 'Uploaded by', value: file.uploadedBy },
     { label: 'Created', value: formatDate(file.createdAt) },
     { label: 'Updated', value: formatDate(file.updatedAt) },
+    ...(file.isDeleted
+      ? [
+          { label: 'Deleted by', value: file.deletedBy ?? '-' },
+          { label: 'Deleted at', value: file.deletedAt ? formatDate(file.deletedAt) : '-' },
+        ]
+      : []),
     { label: 'Checksum', value: file.checksum },
     { label: 'Bucket', value: file.bucket },
     { label: 'Object key', value: file.objectKey },

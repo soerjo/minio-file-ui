@@ -1,6 +1,40 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { formatBytes, formatDate, formatDuration, formatRemaining, makeId } from '@/features/files/utils';
+import {
+  formatBytes,
+  formatDate,
+  formatDuration,
+  formatRemaining,
+  getStatusBadge,
+  makeId,
+} from '@/features/files/utils';
+
+describe('getStatusBadge', () => {
+  it('maps an active file to the Active label with primary styling', () => {
+    const badge = getStatusBadge({ status: 'ACTIVE', isDeleted: false });
+
+    expect(badge.label).toBe('Active');
+    expect(badge.className).toContain('text-primary');
+  });
+
+  it('maps an orphan file to the Orphan label with warning styling', () => {
+    const badge = getStatusBadge({ status: 'ORPHAN', isDeleted: false });
+
+    expect(badge.label).toBe('Orphan');
+    expect(badge.className).toContain('amber');
+  });
+
+  it('maps a deleted file to the Deleted label with destructive styling', () => {
+    const badge = getStatusBadge({ status: 'ACTIVE', isDeleted: true });
+
+    expect(badge.label).toBe('Deleted');
+    expect(badge.className).toContain('text-destructive');
+  });
+
+  it('prioritizes deletion over the underlying status', () => {
+    expect(getStatusBadge({ status: 'ORPHAN', isDeleted: true }).label).toBe('Deleted');
+  });
+});
 
 describe('formatBytes', () => {
   it('formats zero as 0 B', () => {

@@ -73,6 +73,18 @@ describe('FilesTableRow', () => {
     expect(screen.getByRole('button', { name: 'Delete report.pdf' })).toBeInTheDocument();
   });
 
+  it('shows an Orphan badge for orphaned files', () => {
+    renderRow(makeFileUpload({ originalName: 'report.pdf', status: 'ORPHAN' }));
+
+    expect(screen.getByText('Orphan')).toBeInTheDocument();
+  });
+
+  it('shows a Deleted badge for deleted files', () => {
+    renderRow(makeFileUpload({ originalName: 'report.pdf', isDeleted: true, deletedBy: 'user-1' }));
+
+    expect(screen.getByText('Deleted')).toBeInTheDocument();
+  });
+
   it('requests a presigned URL when downloading', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ data: { url: 'https://minio.test/report.pdf' } });
     mockUseGetPresignedUrl.mockReturnValue(presignResult({ mutateAsync }));

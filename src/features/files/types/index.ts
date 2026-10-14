@@ -1,4 +1,4 @@
-export type FileUploadStatus = 'ACTIVE' | 'DELETED';
+export type FileUploadStatus = 'ACTIVE' | 'ORPHAN';
 
 export interface FileUpload {
   id: string;
@@ -9,6 +9,9 @@ export interface FileUpload {
   size: number;
   checksum: string;
   status: FileUploadStatus;
+  isDeleted: boolean;
+  deletedAt: string | null;
+  deletedBy: string | null;
   uploadedBy: string;
   createdAt: string;
   updatedAt: string;

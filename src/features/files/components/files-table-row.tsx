@@ -18,7 +18,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { useCountdown } from '@/hooks';
 import { useDeleteFile, useGetPresignedUrl } from '@/features/files/hooks';
 import type { FileUpload } from '@/features/files/types';
-import { formatBytes, formatDate, openInNewTab } from '@/features/files/utils';
+import { formatBytes, formatDate, getStatusBadge, openInNewTab } from '@/features/files/utils';
 import { CopyLinkButton } from './copy-link-button';
 import { FileDetailDialog } from './file-detail-dialog';
 
@@ -45,6 +45,7 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
   const presignedUrl = presign.data?.data?.url;
   const expiresAt = presign.data?.data?.expiresAt;
   const { isExpired } = useCountdown(expiresAt ?? null);
+  const statusBadge = getStatusBadge(file);
 
   const handleDownload = async () => {
     presign.reset();
@@ -108,13 +109,9 @@ export function FilesTableRow({ file }: { file: FileUpload }) {
       <TableCell className="tabular-nums">{formatBytes(file.size)}</TableCell>
       <TableCell>
         <span
-          className={
-            file.status === 'ACTIVE'
-              ? 'inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'
-              : 'inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'
-          }
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge.className}`}
         >
-          {file.status === 'ACTIVE' ? 'Active' : 'Deleted'}
+          {statusBadge.label}
         </span>
       </TableCell>
       <TableCell className="text-muted-foreground">{formatDate(file.createdAt)}</TableCell>
